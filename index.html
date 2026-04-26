@@ -10,29 +10,67 @@
 
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #111;
-      color: #0f0;
+      font-family: Arial;
+      background: #0f172a;
+      color: #fff;
       padding: 20px;
     }
-    pre {
-      background: #000;
+
+    h1 {
+      color: #38bdf8;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: #1e293b;
+    }
+
+    th, td {
       padding: 10px;
-      border-radius: 6px;
-      overflow: auto;
+      border-bottom: 1px solid #334155;
+      text-align: left;
+    }
+
+    th {
+      background: #334155;
+      color: #38bdf8;
+    }
+
+    tr:hover {
+      background: #1e293b;
+    }
+
+    .ok {
+      color: #22c55e;
+    }
+
+    .bajo {
+      color: #ef4444;
     }
   </style>
 </head>
 
 <body>
 
-<h1>🔥 BraviControl conectado</h1>
-<div id="data">Cargando datos...</div>
+<h1>🔥 Inventario BraviControl (Tiempo Real)</h1>
+
+<table id="tabla">
+  <thead>
+    <tr>
+      <th>Producto</th>
+      <th>Unidad</th>
+      <th>Precio</th>
+      <th>Stock</th>
+      <th>Estado</th>
+      <th>Valor</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
 
 <script>
-/* =========================
-   🔥 CONFIG FIREBASE
-========================= */
 const firebaseConfig = {
   databaseURL: "https://bravicontrol-89aec-default-rtdb.firebaseio.com"
 };
@@ -40,37 +78,40 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-/* =========================
-   🔄 ESCUCHAR DATOS
-========================= */
+/* 🔥 TIEMPO REAL */
 db.ref("bravicontrol/data").on("value", (snap) => {
   const data = snap.val();
 
-  console.log("🔥 DATA:", data);
+  if (!data) return;
 
-  const contenedor = document.getElementById("data");
-
-  // 🔴 SI NO HAY DATOS
-  if (!data) {
-    contenedor.innerHTML = "⚠️ Firebase está vacío (ejecuta enviarTodoAFirebase)";
-    return;
-  }
-
-  // ✅ MOSTRAR DATOS
-  contenedor.innerHTML =
-    "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
+  renderInventario(data.inventario || []);
 });
 
-/* =========================
-   🧪 TEST MANUAL
-========================= */
-window.testFirebase = () => {
-  db.ref("test").set({
-    ok: true,
-    fecha: new Date().toISOString()
+/* 🔥 RENDER INVENTARIO */
+function renderInventario(lista) {
+  const tbody = document.querySelector("#tabla tbody");
+  tbody.innerHTML = "";
+
+  // ❌ saltar primeras filas basura (encabezados)
+  const datos = lista.slice(2);
+
+  datos.forEach(item => {
+    const tr = document.createElement("tr");
+
+    const estado = item.col_8 === "BAJO" ? "bajo" : "ok";
+
+    tr.innerHTML = `
+      <td>${item.inventario_de_insumos__bravizimos || "-"}</td>
+      <td>${item.col_1 || "-"}</td>
+      <td>S/ ${item.col_2 || 0}</td>
+      <td>${item.col_3 || 0}</td>
+      <td class="${estado}">${item.col_8 || "-"}</td>
+      <td>S/ ${item.col_9 || 0}</td>
+    `;
+
+    tbody.appendChild(tr);
   });
-  alert("🔥 Firebase conectado correctamente");
-};
+}
 </script>
 
 </body>
