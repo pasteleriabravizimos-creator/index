@@ -1,76 +1,7 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>BraviControl</title>
-
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
-  <style>
-    body {
-      font-family: Arial;
-      background: #0f172a;
-      color: #fff;
-      padding: 20px;
-    }
-
-    h1 {
-      color: #38bdf8;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-      background: #1e293b;
-    }
-
-    th, td {
-      padding: 10px;
-      border-bottom: 1px solid #334155;
-      text-align: left;
-    }
-
-    th {
-      background: #334155;
-      color: #38bdf8;
-    }
-
-    tr:hover {
-      background: #1e293b;
-    }
-
-    .ok {
-      color: #22c55e;
-    }
-
-    .bajo {
-      color: #ef4444;
-    }
-  </style>
-</head>
-
-<body>
-
-<h1>🔥 Inventario BraviControl (Tiempo Real)</h1>
-
-<table id="tabla">
-  <thead>
-    <tr>
-      <th>Producto</th>
-      <th>Unidad</th>
-      <th>Precio</th>
-      <th>Stock</th>
-      <th>Estado</th>
-      <th>Valor</th>
-    </tr>
-  </thead>
-  <tbody></tbody>
-</table>
-
 <script>
+// ===============================
+// 🔥 CONFIG FIREBASE
+// ===============================
 const firebaseConfig = {
   databaseURL: "https://bravicontrol-89aec-default-rtdb.firebaseio.com"
 };
@@ -78,41 +9,140 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-/* 🔥 TIEMPO REAL */
+// ===============================
+// 🔥 DATA GLOBAL
+// ===============================
+let DATA = {
+  inventario: [],
+  productos: [],
+  ventas: []
+};
+
+// ===============================
+// 🔥 ESCUCHAR FIREBASE REALTIME
+// ===============================
 db.ref("bravicontrol/data").on("value", (snap) => {
   const data = snap.val();
 
-  if (!data) return;
+  if (!data) {
+    console.log("⚠️ Firebase vacío");
+    return;
+  }
 
-  renderInventario(data.inventario || []);
+  console.log("🔥 DATA:", data);
+
+  // Guardamos todo
+  DATA = data;
+
+  // Inicializar sistema
+  cargarSistema();
 });
 
-/* 🔥 RENDER INVENTARIO */
-function renderInventario(lista) {
-  const tbody = document.querySelector("#tabla tbody");
-  tbody.innerHTML = "";
+// ===============================
+// 🚀 INICIALIZAR APP
+// ===============================
+function cargarSistema() {
+  console.log("🚀 Sistema cargado desde Firebase");
 
-  // ❌ saltar primeras filas basura (encabezados)
-  const datos = lista.slice(2);
-
-  datos.forEach(item => {
-    const tr = document.createElement("tr");
-
-    const estado = item.col_8 === "BAJO" ? "bajo" : "ok";
-
-    tr.innerHTML = `
-      <td>${item.inventario_de_insumos__bravizimos || "-"}</td>
-      <td>${item.col_1 || "-"}</td>
-      <td>S/ ${item.col_2 || 0}</td>
-      <td>${item.col_3 || 0}</td>
-      <td class="${estado}">${item.col_8 || "-"}</td>
-      <td>S/ ${item.col_9 || 0}</td>
-    `;
-
-    tbody.appendChild(tr);
-  });
+  try {
+    renderDashboard();
+    renderInventario();
+    renderProductos();
+  } catch (e) {
+    console.log("⚠️ Esperando funciones...");
+  }
 }
-</script>
 
-</body>
-</html>
+// ===============================
+// 📊 DASHBOARD
+// ===============================
+function renderDashboard() {
+  if (!DATA.ventas) return;
+
+  const totalVentas = DATA.ventas.length;
+
+  document.getElementById("content").innerHTML = `
+    <h2>📊 Dashboard</h2>
+    <p>Total ventas: ${totalVentas}</p>
+  `;
+}
+
+// ===============================
+// 📦 INVENTARIO
+// ===============================
+function renderInventario() {
+  if (!DATA.inventario) return;
+
+  let html = `
+    <h2>📦 Inventario</h2>
+    <table border="1" cellpadding="5">
+      <tr>
+        <th>Insumo</th>
+        <th>Stock</th>
+      </tr>
+  `;
+
+  DATA.inventario.forEach(item => {
+    const nombre = item.insumo || item.nombre || "-";
+    const stock = item.stock || "-";
+
+    html += `
+      <tr>
+        <td>${nombre}</td>
+        <td>${stock}</td>
+      </tr>
+    `;
+  });
+
+  html += `</table>`;
+
+  document.getElementById("content").innerHTML = html;
+}
+
+// ===============================
+// 🧁 PRODUCTOS
+// ===============================
+function renderProductos() {
+  if (!DATA.productos) return;
+
+  let html = `
+    <h2>🧁 Productos</h2>
+    <table border="1" cellpadding="5">
+      <tr>
+        <th>Nombre</th>
+        <th>Precio</th>
+      </tr>
+  `;
+
+  DATA.productos.forEach(p => {
+    html += `
+      <tr>
+        <td>${p.nombre}</td>
+        <td>S/ ${p.precio_venta || 0}</td>
+      </tr>
+    `;
+  });
+
+  html += `</table>`;
+
+  document.getElementById("content").innerHTML = html;
+}
+
+// ===============================
+// 🔄 NAVEGACIÓN
+// ===============================
+function nav(_, vista) {
+  if (vista === "dashboard") renderDashboard();
+  if (vista === "inventario") renderInventario();
+  if (vista === "productos") renderProductos();
+}
+
+// ===============================
+// 📅 FECHA
+// ===============================
+document.addEventListener("DOMContentLoaded", () => {
+  const fecha = new Date().toLocaleString();
+  const el = document.getElementById("fecha");
+  if (el) el.textContent = fecha;
+});
+</script>
