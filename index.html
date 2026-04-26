@@ -1045,6 +1045,81 @@ let proveedores = LS('bc_prov') || initProveedores();
 const saveProveedores = function(){ LS_SET('bc_prov',proveedores); fbSync('proveedores',proveedores); };
 const saveProv = saveProveedores;
 
+// ══════════════════════════════════════════════════
+// UTILITY FUNCTIONS
+// ══════════════════════════════════════════════════
+
+function openModal(id){
+  var el = document.getElementById(id);
+  if(el){ el.style.display='flex'; el.classList.add('open'); }
+}
+
+function closeModal(id){
+  var el = document.getElementById(id);
+  if(el){ el.style.display='none'; el.classList.remove('open'); }
+}
+
+var toastTimer = null;
+function toast(msg, tipo){
+  var el = document.getElementById('toast');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'toast';
+    el.style.cssText = 'position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:10px;'
+      +'font-size:13px;font-weight:600;z-index:9999;transition:all .3s;box-shadow:0 4px 20px rgba(0,0,0,.2);'
+      +'max-width:320px;line-height:1.4;';
+    document.body.appendChild(el);
+  }
+  var colors = {
+    ok:   {bg:'#16a34a', color:'#fff'},
+    warn: {bg:'#f59e0b', color:'#fff'},
+    err:  {bg:'#dc2626', color:'#fff'},
+    info: {bg:'var(--blue)', color:'#fff'}
+  };
+  var c = colors[tipo] || colors.ok;
+  el.style.background = c.bg;
+  el.style.color = c.color;
+  el.textContent = msg;
+  el.style.opacity = '1';
+  el.style.transform = 'translateY(0)';
+  if(toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(10px)';
+  }, 3000);
+}
+
+function fmtIA(txt){
+  if(!txt) return '';
+  return txt
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g,'<em>$1</em>')
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
+    .replace(/\n/g,'<br>');
+}
+
+function addMsg(txt, tipo){
+  addMsgIA(txt, tipo);
+}
+
+function addTyping(){
+  var el = document.getElementById('ia-msgs');
+  if(!el) return;
+  var d = document.createElement('div');
+  d.className = 'typing'; d.id = 'ia-typing';
+  d.innerHTML = '<div class="td"></div><div class="td"></div><div class="td"></div>';
+  el.appendChild(d);
+  el.scrollTop = el.scrollHeight;
+}
+
+function rmTyping(){
+  var el = document.getElementById('ia-typing');
+  if(el) el.remove();
+}
+
+
+
 function initProveedores(){
   // Extraer proveedores únicos del INV cargado del Excel
   const uniq={};
@@ -2017,38 +2092,59 @@ function savePgTransfer(){
 let _metaIns='';
 function editarMeta(nombre){
   _metaIns=nombre;
-  const m=alm_meta[nombre]||{stock_min:0,stock_max:0,ubicacion:'',alm_principal:'DEPOSITO'};
-  const html=`<div class="modal-t">⚙ Configurar: ${nombre}</div>
-    <div class="g2 mb12">
-      <div><label class="flbl">Stock mínimo (${INV[nombre]?.unidad||''})</label><input type="number" id="em-min" value="${m.stock_min}" step="0.01" min="0"></div>
-      <div><label class="flbl">Stock máximo</label><input type="number" id="em-max" value="${m.stock_max}" step="0.01" min="0"></div>
-    </div>
-    <div class="g2 mb12">
-      <div><label class="flbl">Ubicación (estante)</label>
-        <select id="em-ub"><option value="">Sin ubicación</option>${UBICACIONES.map(u=>`<option value="${u}" ${m.ubicacion===u?'selected':''}>${u}</option>`).join('')}</select>
-      </div>
-      <div><label class="flbl">Almacén principal</label>
-        <select id="em-alm">${ALMACENES.map(a=>`<option value="${a}" ${m.alm_principal===a?'selected':''}>${ALM_LABELS[a]}</option>`).join('')}</select>
-      </div>
-    </div>
-    <div class="modal-f">
-      <button class="btn" onclick="closeModal('m-meta')">Cancelar</button>
-      <button class="btn btn-acc" onclick="saveMetaIns()">Guardar</button>
-    </div>`;
-  document.getElementById('m-meta-body').innerHTML=html;
+  var m=alm_meta[nombre]||{stock_min:0,stock_max:0,ubicacion:'',alm_principal:'DEPOSITO'};
+  var uni=(INV[nombre]&&INV[nombre].unidad)||'';
+  var precio=(INV[nombre]&&INV[nombre].costo)||0;
+  var ubOpts='<option value="">Sin ubicacion</option>';
+  UBICACIONES.forEach(function(u){
+    ubOpts+='<option value="'+u+'"'+(m.ubicacion===u?' selected':'')+'>'+u+'</option>';
+  });
+  var almOpts='';
+  ALMACENES.forEach(function(a){
+    almOpts+='<option value="'+a+'"'+(m.alm_principal===a?' selected':'')+'>'+ALM_LABELS[a]+'</option>';
+  });
+  var el=document.getElementById('m-meta-body');
+  if(!el) return;
+  el.innerHTML=''
+    +'<div class="modal-t">Configurar: '+nombre+'</div>'
+    +'<div class="g2 mb12">'
+    +'<div><label class="flbl">Stock minimo ('+uni+')</label>'
+    +'<input type="number" id="em-min" value="'+m.stock_min+'" step="0.01" min="0"></div>'
+    +'<div><label class="flbl">Stock maximo</label>'
+    +'<input type="number" id="em-max" value="'+m.stock_max+'" step="0.01" min="0"></div>'
+    +'</div>'
+    +'<div class="g2 mb12">'
+    +'<div><label class="flbl">Ubicacion</label>'
+    +'<select id="em-ub">'+ubOpts+'</select></div>'
+    +'<div><label class="flbl">Almacen principal</label>'
+    +'<select id="em-alm">'+almOpts+'</select></div>'
+    +'</div>'
+    +'<div class="mb12"><label class="flbl">Precio (S/)</label>'
+    +'<input type="number" id="em-precio" value="'+precio+'" step="0.01" min="0"></div>'
+    +'<div class="modal-f">'
+    +'<button class="btn" id="em-cancel-btn">Cancelar</button>'
+    +'<button class="btn btn-acc" id="em-save-btn">Guardar</button>'
+    +'</div>';
+  // Attach events after innerHTML set
+  document.getElementById('em-cancel-btn').onclick=function(){ closeModal('m-meta'); };
+  document.getElementById('em-save-btn').onclick=saveMetaIns;
   openModal('m-meta');
 }
 function saveMetaIns(){
   if(!_metaIns)return;
+  var precio=parseFloat(document.getElementById('em-precio')?.value)||0;
+  if(precio>0 && INV[_metaIns]) INV[_metaIns].costo=precio;
   updateInsMeta(_metaIns,{
     stock_min:parseFloat(document.getElementById('em-min')?.value)||0,
     stock_max:parseFloat(document.getElementById('em-max')?.value)||0,
     ubicacion:document.getElementById('em-ub')?.value||'',
     alm_principal:document.getElementById('em-alm')?.value||'DEPOSITO',
   });
+  if(precio>0){ saveStocks(); }
   closeModal('m-meta');
-  toast(`✅ Configuración actualizada para ${_metaIns}`,'ok');
+  toast('Actualizado: '+_metaIns,'ok');
   renderPage(currentPage);
+  updateBadges();
 }
 
 // ─ MODO RAPIDO
