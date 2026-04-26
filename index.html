@@ -1,12 +1,20 @@
-const firebaseConfig = {...}
-firebase.initializeApp(...)
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>BraviControl</title>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
+
+<body>
+
+<h1>🔥 BraviControl conectado</h1>
+<div id="data"></div>
+
 <script>
-/* =========================
-   🔥 FIREBASE CONFIG
-========================= */
 const firebaseConfig = {
   databaseURL: "https://bravicontrol-89aec-default-rtdb.firebaseio.com"
 };
@@ -14,105 +22,16 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-/* =========================
-   🔄 VARIABLES GLOBALES
-========================= */
-let INVENTARIO = [];
-let PRODUCTOS = [];
-let VENTAS = [];
-
-/* =========================
-   🔥 ESCUCHAR CAMBIOS EN TIEMPO REAL
-========================= */
+// 🔥 ESCUCHAR DATOS EN TIEMPO REAL
 db.ref("bravicontrol/data").on("value", (snap) => {
   const data = snap.val();
-  if (!data) return;
 
-  console.log("🔥 Sync en vivo:", data);
+  console.log("🔥 DATA:", data);
 
-  INVENTARIO = data.inventario || [];
-  PRODUCTOS = data.productos || [];
-  VENTAS = data.ventas || [];
-
-  renderAll();
+  document.getElementById("data").innerHTML =
+    "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
 });
-
-/* =========================
-   🧠 RENDER PRINCIPAL
-========================= */
-function renderAll() {
-  renderInventario();
-  renderProductos();
-  renderVentas();
-}
-
-/* =========================
-   📦 INVENTARIO
-========================= */
-function renderInventario() {
-  console.log("Inventario actualizado:", INVENTARIO);
-
-  // 👉 aquí llamas tu tabla actual
-  if (typeof drawInventario === "function") {
-    drawInventario(INVENTARIO);
-  }
-}
-
-/* =========================
-   🧁 PRODUCTOS
-========================= */
-function renderProductos() {
-  if (typeof drawProductos === "function") {
-    drawProductos(PRODUCTOS);
-  }
-}
-
-/* =========================
-   🛒 VENTAS
-========================= */
-function renderVentas() {
-  if (typeof drawVentas === "function") {
-    drawVentas(VENTAS);
-  }
-}
-
-/* =========================
-   ✅ GUARDAR MOVIMIENTO (EJEMPLO)
-========================= */
-async function guardarMovimiento(data) {
-  const ref = db.ref("bravicontrol/movimientos").push();
-
-  await ref.set({
-    ...data,
-    fecha: new Date().toISOString()
-  });
-
-  alert("✅ Guardado correctamente");
-}
-
-/* =========================
-   🧹 LIMPIAR VENTAS AUTOMÁTICO
-========================= */
-function limpiarVentas() {
-  document.querySelectorAll("input[type='number']").forEach(i => i.value = 0);
-}
-
-/* =========================
-   🔥 EJEMPLO REGISTRAR VENTA
-========================= */
-async function registrarVentas(data) {
-  const ref = db.ref("bravicontrol/ventas").push();
-
-  await ref.set(data);
-
-  limpiarVentas(); // 🔥 IMPORTANTE
-}
-
-/* =========================
-   🧪 DEBUG (OPCIONAL)
-========================= */
-window.testFirebase = () => {
-  db.ref("test").set({ ok: true });
-  console.log("🔥 Firebase conectado");
-};
 </script>
+
+</body>
+</html>
