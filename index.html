@@ -7,14 +7,32 @@
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #0f0;
+      padding: 20px;
+    }
+    pre {
+      background: #000;
+      padding: 10px;
+      border-radius: 6px;
+      overflow: auto;
+    }
+  </style>
 </head>
 
 <body>
 
 <h1>🔥 BraviControl conectado</h1>
-<div id="data"></div>
+<div id="data">Cargando datos...</div>
 
 <script>
+/* =========================
+   🔥 CONFIG FIREBASE
+========================= */
 const firebaseConfig = {
   databaseURL: "https://bravicontrol-89aec-default-rtdb.firebaseio.com"
 };
@@ -22,15 +40,37 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// 🔥 ESCUCHAR DATOS EN TIEMPO REAL
+/* =========================
+   🔄 ESCUCHAR DATOS
+========================= */
 db.ref("bravicontrol/data").on("value", (snap) => {
   const data = snap.val();
 
   console.log("🔥 DATA:", data);
 
-  document.getElementById("data").innerHTML =
+  const contenedor = document.getElementById("data");
+
+  // 🔴 SI NO HAY DATOS
+  if (!data) {
+    contenedor.innerHTML = "⚠️ Firebase está vacío (ejecuta enviarTodoAFirebase)";
+    return;
+  }
+
+  // ✅ MOSTRAR DATOS
+  contenedor.innerHTML =
     "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
 });
+
+/* =========================
+   🧪 TEST MANUAL
+========================= */
+window.testFirebase = () => {
+  db.ref("test").set({
+    ok: true,
+    fecha: new Date().toISOString()
+  });
+  alert("🔥 Firebase conectado correctamente");
+};
 </script>
 
 </body>
